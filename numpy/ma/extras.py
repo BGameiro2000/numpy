@@ -2092,9 +2092,10 @@ def notmasked_contiguous(a, axis=None):
     return result
 
 
-def _ezclump(mask):
+def _ezclump(mask, closed):
     """
     Finds the clumps (groups of data with the same values) for a 1D bool array.
+    If closed is True, includes first element with different value in the previous clump.
 
     Returns a series of slices.
     """
@@ -2105,23 +2106,23 @@ def _ezclump(mask):
 
     if mask[0]:
         if len(idx) == 0:
-            return [slice(0, mask.size)]
+            return [slice(0, mask.size+closed)]
 
-        r = [slice(0, idx[0])]
-        r.extend((slice(left, right)
+        r = [slice(0, idx[0]+closed)]
+        r.extend((slice(left, right+closed)
                   for left, right in zip(idx[1:-1:2], idx[2::2])))
     else:
         if len(idx) == 0:
             return []
 
-        r = [slice(left, right) for left, right in zip(idx[:-1:2], idx[1::2])]
+        r = [slice(left, right+closed) for left, right in zip(idx[:-1:2], idx[1::2])]
 
     if mask[-1]:
-        r.append(slice(idx[-1], mask.size))
+        r.append(slice(idx[-1], mask.size+closed))
     return r
 
 
-def clump_unmasked(a):
+def clump_unmasked(a, closed=False):
     """
     Return list of slices corresponding to the unmasked clumps of a 1-D array.
     (A "clump" is defined as a contiguous region of the array).
@@ -2130,6 +2131,8 @@ def clump_unmasked(a):
     ----------
     a : ndarray
         A one-dimensional masked array.
+    closed : bool, optional
+        If True, includes first element with different value in the previous clump.
 
     Returns
     -------
@@ -2157,10 +2160,10 @@ def clump_unmasked(a):
     mask = getattr(a, '_mask', nomask)
     if mask is nomask:
         return [slice(0, a.size)]
-    return _ezclump(~mask)
+    return _ezclump(~mask, closed)
 
 
-def clump_masked(a):
+def clump_masked(a, closed=False):
     """
     Returns a list of slices corresponding to the masked clumps of a 1-D array.
     (A "clump" is defined as a contiguous region of the array).
@@ -2169,6 +2172,8 @@ def clump_masked(a):
     ----------
     a : ndarray
         A one-dimensional masked array.
+    closed : bool, optional
+        If True, includes first element with different value in the previous clump.
 
     Returns
     -------
@@ -2196,7 +2201,7 @@ def clump_masked(a):
     mask = ma.getmask(a)
     if mask is nomask:
         return []
-    return _ezclump(mask)
+    return _ezclump(mask, closed)
 
 
 ###############################################################################
